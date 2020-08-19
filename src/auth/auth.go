@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"github.com/dgrijalva/jwt-go"
 	"net/http"
+	"net/url"
 	"shoppinglist-server/src/credentials"
+	"shoppinglist-server/src/logic"
 	slUtils "shoppinglist-server/src/utils"
 )
 
@@ -27,6 +29,7 @@ func setJWTCookie(writer http.ResponseWriter, username string, secret []byte) {
 		"username": username,
 	})
 	tokenString, _ := token.SignedString(secret)
+	tokenString = url.QueryEscape(tokenString)
 	http.SetCookie(writer, &http.Cookie{
 		Name:     "jwt",
 		Value:    tokenString,
@@ -47,6 +50,11 @@ func (r registrationHandler) ServeHTTP(writer http.ResponseWriter, request *http
 		writer.WriteHeader(http.StatusForbidden)
 		_, _ = writer.Write(slUtils.NewWrappedError("username is already taken"))
 		return
+	}
+	err = logic.InitNewUser(creds.Username)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		_, _ = writer.Write(slUtils.WrapError(err))
 	}
 	// User has provided correct credentials and needs JWT to be set
 	setJWTCookie(writer, creds.Username, r.secret)
