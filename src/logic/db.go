@@ -14,7 +14,7 @@ import (
 var listCollection *mongo.Collection
 var accessCollection *mongo.Collection
 
-func initDB(url, dbName, accessCollectionName, listCollectionName string) error {
+func InitDB(url, dbName, accessCollectionName, listCollectionName string) error {
 	client, err := mongo.NewClient(options.Client().ApplyURI(url))
 	if err != nil {
 		return err
@@ -82,6 +82,96 @@ func updateList(id, content string) error {
 	}
 	if res.ModifiedCount != 1 {
 		return errors.New("couldn't modify selected list")
+	}
+	return nil
+}
+
+func insertListInDB(listRec list) error {
+	_, err := listCollection.InsertOne(context.TODO(), listRec)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func insertAccessRecord(record accessRecord) error {
+	_, err := accessCollection.InsertOne(context.TODO(), record)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func updateAccessRecord(record accessRecord) error {
+	_, err := accessCollection.UpdateOne(context.TODO(), bson.D{{"username", record.Username}}, bson.D{{"$set", record}})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/*
+May have race condition. Not too critical, but would be better to fix it.
+*/
+func addToAccessLists(username, id string) error {
+	res := accessCollection.FindOne(context.TODO(), bson.D{{"username", username}})
+	if res.Err() != nil {
+		return res.Err()
+	}
+	var record accessRecord
+	err := res.Decode(&record)
+	if err != nil {
+		return err
+	}
+	ls := listCollection.FindOne(context.TODO(), bson.D{{"id", id}})
+	if ls.Err() != nil {
+		return ls.Err()
+	}
+	var listRec list
+	err = ls.Decode(&listRec)
+	if err != nil {
+		return err
+	}
+	record.AvailableLists = append(record.AvailableLists, listLink{
+		Id:          id,
+		DisplayName: listRec.OriginalName,
+	})
+	err = updateAccessRecord(record)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/*
+May have race condition. Not too critical, but would be better to fix it.
+*/
+func removeFromAccessLists(username, id string) error {
+	res := accessCollection.FindOne(context.TODO(), bson.D{{"username", username}})
+	if res.Err() != nil {
+		return res.Err()
+	}
+	var record accessRecord
+	err := res.Decode(&record)
+	if err != nil {
+		return err
+	}
+	var newLists []listLink = nil
+	for i, lst := range record.AvailableLists {
+		if lst.Id == id {
+			last := len(record.AvailableLists) - 1
+			record.AvailableLists[i] = record.AvailableLists[last]
+			newLists = record.AvailableLists[:last]
+			break
+		}
+	}
+	if newLists == nil {
+		return errors.New("no such list")
+	}
+	record.AvailableLists = newLists
+	err = updateAccessRecord(record)
+	if err != nil {
+		return err
 	}
 	return nil
 }
