@@ -64,7 +64,14 @@ func main() {
 	authMW := negroni.New()
 	authMW.UseFunc(jwtmiddleware.New(jwtmiddleware.Options{
 		ValidationKeyGetter: getKey,
-		SigningMethod:       jwt.SigningMethodHS256,
+		Extractor: func(r *http.Request) (string, error) {
+			cookie, err := r.Cookie("jwt")
+			if err != nil {
+				return "", err
+			}
+			return cookie.Value, nil
+		},
+		SigningMethod: jwt.SigningMethodHS256,
 	}).HandlerWithNext)
 	authMW.UseHandler(authenticatedRouter)
 
@@ -76,6 +83,9 @@ func main() {
 	mainChain.Use(negroni.NewLogger())
 	mainChain.UseHandler(outerRouter)
 
+	log.Println("Using port", port)
+
 	err := http.ListenAndServe(port, mainChain)
 	log.Println(err)
+
 }
