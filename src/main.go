@@ -63,9 +63,9 @@ func main() {
 	// Share a list with another user
 	authenticatedRouter.Path("/v1/list/share").Methods("POST").HandlerFunc(handlerPlaceholder)
 	// Get all shared lists
-	authenticatedRouter.Path("/v1/lists/shared").Methods("GET").HandlerFunc(handlerPlaceholder)
-	// Get all available lists
-	authenticatedRouter.Path("/v1/lists/available").Methods("GET").HandlerFunc(handlerPlaceholder)
+	authenticatedRouter.Path("/v1/lists/shared").Methods("GET").HandlerFunc(logic.HandleGetSharedLists)
+	// Get all owned lists
+	authenticatedRouter.Path("/v1/lists/owned").Methods("GET").HandlerFunc(logic.HandleGetOwnedLists)
 	// Get all notifications
 	authenticatedRouter.Path("/v1/notifications/get").Methods("GET").HandlerFunc(handlerPlaceholder)
 	// Delete notification
