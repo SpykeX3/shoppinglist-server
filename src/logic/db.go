@@ -38,9 +38,9 @@ func InitDB(url, dbName, accessCollectionName, listCollectionName string) error 
 		return err
 	}
 	accessCollection = client.Database(dbName).Collection(accessCollectionName)
-	_, err = listCollection.Indexes().CreateOne(context.TODO(),
+	_, err = accessCollection.Indexes().CreateOne(context.TODO(),
 		mongo.IndexModel{
-			Keys:    bsonx.Doc{{"id", bsonx.Int32(1)}},
+			Keys:    bsonx.Doc{{"username", bsonx.Int32(1)}},
 			Options: options.Index().SetUnique(true),
 		})
 	if err != nil {
@@ -94,6 +94,17 @@ func insertListInDB(listRec list) error {
 	return nil
 }
 
+func removeListFromDB(id string) error {
+	res, err := listCollection.DeleteOne(context.TODO(), bson.D{{"id", id}})
+	if err != nil {
+		return err
+	}
+	if res.DeletedCount != 1 {
+		return errors.New("no list was deleted")
+	}
+	return nil
+}
+
 func insertAccessRecord(record accessRecord) error {
 	_, err := accessCollection.InsertOne(context.TODO(), record)
 	if err != nil {
@@ -110,68 +121,33 @@ func updateAccessRecord(record accessRecord) error {
 	return nil
 }
 
-/*
-May have race condition. Not too critical, but would be better to fix it.
-*/
-func addToAccessLists(username, id string) error {
-	res := accessCollection.FindOne(context.TODO(), bson.D{{"username", username}})
+func addToAccessListsOwned(username string, rec listLink) error {
+	res := accessCollection.FindOneAndUpdate(context.TODO(), bson.D{{"username", username}}, bson.D{{"$push", bson.D{{"owned", rec}}}})
 	if res.Err() != nil {
 		return res.Err()
-	}
-	var record accessRecord
-	err := res.Decode(&record)
-	if err != nil {
-		return err
-	}
-	ls := listCollection.FindOne(context.TODO(), bson.D{{"id", id}})
-	if ls.Err() != nil {
-		return ls.Err()
-	}
-	var listRec list
-	err = ls.Decode(&listRec)
-	if err != nil {
-		return err
-	}
-	record.AvailableLists = append(record.AvailableLists, listLink{
-		Id:          id,
-		DisplayName: listRec.OriginalName,
-	})
-	err = updateAccessRecord(record)
-	if err != nil {
-		return err
 	}
 	return nil
 }
 
-/*
-May have race condition. Not too critical, but would be better to fix it.
-*/
-func removeFromAccessLists(username, id string) error {
-	res := accessCollection.FindOne(context.TODO(), bson.D{{"username", username}})
+func addToAccessListsShared(username string, rec listLink) error {
+	res := accessCollection.FindOneAndUpdate(context.TODO(), bson.D{{"username", username}}, bson.D{{"$push", bson.D{{"shared", rec}}}})
 	if res.Err() != nil {
 		return res.Err()
 	}
-	var record accessRecord
-	err := res.Decode(&record)
-	if err != nil {
-		return err
+	return nil
+}
+
+func removeFromAccessListsOwned(username, id string) error {
+	res := accessCollection.FindOneAndUpdate(context.TODO(), bson.D{{"username", username}}, bson.D{{"$pull", bson.D{{"owned", bson.D{{"id", id}}}}}})
+	if res.Err() != nil {
+		return res.Err()
 	}
-	var newLists []listLink = nil
-	for i, lst := range record.AvailableLists {
-		if lst.Id == id {
-			last := len(record.AvailableLists) - 1
-			record.AvailableLists[i] = record.AvailableLists[last]
-			newLists = record.AvailableLists[:last]
-			break
-		}
-	}
-	if newLists == nil {
-		return errors.New("no such list")
-	}
-	record.AvailableLists = newLists
-	err = updateAccessRecord(record)
-	if err != nil {
-		return err
+	return nil
+}
+func removeFromAccessListsShared(username, id string) error {
+	res := accessCollection.FindOneAndUpdate(context.TODO(), bson.D{{"username", username}}, bson.D{{"$pull", bson.D{{"shared", bson.D{{"id", id}}}}}})
+	if res.Err() != nil {
+		return res.Err()
 	}
 	return nil
 }
