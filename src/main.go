@@ -53,18 +53,85 @@ func main() {
 
 	authenticatedRouter := mux.NewRouter()
 	// Get list contents
+	/*
+		->
+		GET example.com/v1/list/get?id=1gMzFPoiPWNywuRwYYrilF6RP2D
+
+		<-
+		{"error":"something went wrong"}
+		or
+		{"id":"1gMzFPoiPWNywuRwYYrilF6RP2D","owner":"katya","guests":["vasya"],"OriginalName":"Katya kishechka","last_changed":"2020-08-20T15:59:04.82Z","content":"100 proc"}
+	*/
 	authenticatedRouter.Path("/v1/list/get").Methods("GET").HandlerFunc(logic.HandleGetList)
 	// Create new list
+	/*
+		->
+		POST example.com/v1/list/create
+
+		{"name":"New list name","content":"list goes here"}
+		<-
+		{"error":"something went wrong"}
+		or
+		{"id":"1gMzFPoiPWNywuRwYYrilF6RP2D"}
+	*/
 	authenticatedRouter.Path("/v1/list/create").Methods("POST").HandlerFunc(logic.HandleCreateList)
 	// Delete a list
+	/*
+		->
+		POST example.com/v1/list/delete?id=1gMzFPoiPWNywuRwYYrilF6RP2D
+
+		<-
+		{"error":"something went wrong"}
+		or
+		Status 200 and empty response
+	*/
 	authenticatedRouter.Path("/v1/list/delete").Methods("POST").HandlerFunc(logic.HandleDeleteList)
 	// Update list contents
+	/*
+		->
+		POST example.com/v1/list/update?id=1gMzFPoiPWNywuRwYYrilF6RP2D
+
+		{"content":"updated content here"}
+		<-
+		{"error":"something went wrong"}
+		or
+		Status 200 and empty response
+	*/
 	authenticatedRouter.Path("/v1/list/update").Methods("POST").HandlerFunc(logic.HandleUpdateList)
 	// Share a list with another user
-	authenticatedRouter.Path("/v1/list/share").Methods("POST").HandlerFunc(handlerPlaceholder)
+	// Update list contents
+	/*
+		->
+		POST example.com/v1/list/share
+
+		{"id":"1gMzFPoiPWNywuRwYYrilF6RP2D","guest":"username of receiver"}
+		<-
+		{"error":"something went wrong"}
+		or
+		Status 200 and empty response
+	*/
+	authenticatedRouter.Path("/v1/list/share").Methods("POST").HandlerFunc(logic.HandleShareList)
 	// Get all shared lists
+	/*
+		->
+		GET example.com/v1/list/shared
+
+		<-
+		{"error":"something went wrong"}
+		or
+		[{"id":"1gMwLXlw92AZMcvAwyidItzOR29","display_name":"List1"},{"id":"Jn7wLXlw92A36cvAwyidItzOH65","display_name":"List2"}]
+	*/
 	authenticatedRouter.Path("/v1/lists/shared").Methods("GET").HandlerFunc(logic.HandleGetSharedLists)
 	// Get all owned lists
+	/*
+		->
+		GET example.com/v1/list/owned
+
+		<-
+		{"error":"something went wrong"}
+		or
+		[{"id":"1gMwLXlw92AZMcvAwyidItzOR29","display_name":"List1"},{"id":"Jn7wLXlw92A36cvAwyidItzOH65","display_name":"List2"}]
+	*/
 	authenticatedRouter.Path("/v1/lists/owned").Methods("GET").HandlerFunc(logic.HandleGetOwnedLists)
 	// Get all notifications
 	authenticatedRouter.Path("/v1/notifications/get").Methods("GET").HandlerFunc(handlerPlaceholder)
