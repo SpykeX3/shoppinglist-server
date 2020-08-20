@@ -50,7 +50,7 @@ func createList(username, name, content string) (string, error) {
 	newList := list{
 		Id:           id,
 		Owner:        username,
-		Guests:       make([]string, 0),
+		Guests:       make([]string, 0, 1),
 		OriginalName: name,
 		LastChanged:  time.Now(),
 		Content:      content,
@@ -126,13 +126,13 @@ func listSharedLists(username string) ([]listLink, error) {
 	if err != nil {
 		return nil, err
 	}
-	return acc.OwnedLists, nil
+	return acc.SharedLists, nil
 }
 
 func InitNewUser(username string) error {
 	return insertAccessRecord(accessRecord{
 		Username:    username,
-		OwnedLists:  make([]listLink, 0),
-		SharedLists: make([]listLink, 0),
+		OwnedLists:  make([]listLink, 0, 1),
+		SharedLists: make([]listLink, 0, 1),
 	})
 }
