@@ -21,6 +21,12 @@ func internalError(w http.ResponseWriter, err error) {
 	_, _ = w.Write(utils.WrapError(err))
 }
 
+func accessDenied(w http.ResponseWriter, username, id string) {
+	log.Warningln("User", username, "tried to access list", id, "without permission")
+	w.WriteHeader(http.StatusUnauthorized)
+	_, _ = w.Write(utils.NewWrappedError("access denied"))
+}
+
 func HandleGetList(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	username := getUsername(r)
@@ -123,7 +129,7 @@ func HandleDeleteList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !authorized {
-		_, _ = w.Write(utils.NewWrappedError("access denied"))
+		accessDenied(w, username, id)
 		return
 	}
 
@@ -164,4 +170,31 @@ func HandleGetOwnedLists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, _ = w.Write(result)
+}
+
+type shareReq struct {
+	Id    string `json:"id"`
+	Guest string `json:"guest"`
+}
+
+func HandleShareList(w http.ResponseWriter, r *http.Request) {
+	username := getUsername(r)
+	var request shareReq
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		internalError(w, err)
+		return
+	}
+	err = json.Unmarshal(body, &request)
+	if err != nil {
+		log.Warnln(err)
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write(utils.NewWrappedError("invalid request body"))
+		return
+	}
+	err = addGuest(username, request.Guest, request.Id)
+	if err != nil {
+		internalError(w, err)
+		return
+	}
 }

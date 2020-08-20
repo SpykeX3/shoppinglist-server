@@ -95,6 +95,26 @@ func unlinkList(username, id string) error {
 	}
 	return errors.New("")
 }
+func addGuest(owner, guest, id string) error {
+	accessRec, err := getAccessByUsername(owner)
+	if err != nil {
+		return err
+	}
+	for _, listLn := range accessRec.OwnedLists {
+		if listLn.Id == id {
+			err = addToAccessListsShared(guest, listLn)
+			if err != nil {
+				return err
+			}
+			err = addToListGuests(guest, id)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+	return errors.New("access denied")
+}
 
 func deleteList(id string) error {
 	list, err := getListById(id)

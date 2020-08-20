@@ -128,6 +128,13 @@ func addToAccessListsOwned(username string, rec listLink) error {
 	}
 	return nil
 }
+func addToListGuests(username, id string) error {
+	res := listCollection.FindOneAndUpdate(context.TODO(), bson.D{{"id", id}}, bson.D{{"$push", bson.D{{"guests", username}}}})
+	if res.Err() != nil {
+		return res.Err()
+	}
+	return nil
+}
 
 func addToAccessListsShared(username string, rec listLink) error {
 	res := accessCollection.FindOneAndUpdate(context.TODO(), bson.D{{"username", username}}, bson.D{{"$push", bson.D{{"shared", rec}}}})
